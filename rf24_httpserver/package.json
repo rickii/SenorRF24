@@ -1,0 +1,16 @@
+{
+  "name": "rf24_httpserver",
+  "version": "1.0.0",
+  "description": "A lightweight http server, accepts posts from sensor nodes, posts data to coud service ThingSpeak.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "long_greg_c@hotmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.13.3",
+    "querystring": "^0.2.0",
+    "request": "^2.64.0"
+  }
+}
