@@ -1,0 +1,76 @@
+<html>
+<head>
+
+    <title>Google Gauge - ThingSpeak</title>
+
+    %%PLUGIN_CSS%%
+    %%PLUGIN_JAVASCRIPT%%
+
+</head>
+
+<body>
+<div id="table_div"></div>
+</body>
+</html>
+
+<style type="text/css">
+    body { background-color: #ddd; }
+    #table_div { height: 100%; width: 100%; display: table; }
+</style>
+
+
+<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
+<script type='text/javascript' src='https://www.google.com/jsapi'></script>
+<script type='text/javascript'>
+    var table;
+    //var charts;
+    var data;
+
+    google.load('visualization', '1', {packages:['table']});
+    google.setOnLoadCallback(initChart);
+
+    function displayData(sensorData) {
+
+        if (data.getNumberOfRows()){
+            data.removeRows(0, 10);
+        }
+        data.addRows(sensorData);
+        table.draw(data, options);
+    }
+
+    function loadData() {
+
+        var sensorData = [];
+        var channel_id = window.parent.location.pathname.match(/\d+/g);
+        $.getJSON('https://api.thingspeak.com/channels/' + channel_id + '/feed.json?results=10', function(data) {
+            for (var index = 0; index < data.feeds.length; ++index){
+                var k = data.feeds[index];
+                sensorData.push([new Date(k.created_at), Number(k.field3), Number(k.field1), k.field2 ]);
+            };
+            displayData(sensorData);
+        });
+    }
+
+    function initChart() {
+
+        data = new google.visualization.DataTable();
+        //data.addColumn('number','Update Id');
+        data.addColumn('datetime', 'Time');
+        data.addColumn('number', 'Temp');
+        data.addColumn('number', 'Node Id');
+        data.addColumn('string', 'IP Address');
+
+        table = new google.visualization.Table(document.getElementById('table_div'));
+        options = {
+            width: '100%', height: '100%',
+            showRowNumber: true,
+            sortColumn: 0,
+            sortAscending: false
+        };
+
+        loadData();
+
+        setInterval('loadData()', 15000);
+    }
+</script>
+
