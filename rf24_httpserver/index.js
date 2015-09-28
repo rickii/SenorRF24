@@ -15,7 +15,9 @@ var querystring = require('querystring');
 var location = "Gregs Dutch Sensor Network";
 
 // Each thingspeak channel has a seperate api key, this will map between our sensor nodes and the keys.
-var thingSpeakChannels = [{_id:4,apiKey:'4BLDCMJ2KGMKCRGN'},{_id:5,apiKey:'11111'}];
+var thingSpeakChannels = [{_id:4,apiKey:'4BLDCMJ2KGMKCRGN'},{_id:6,apiKey:'J7EMRJYR7YIA0Z7N'}];
+
+var thingSpeakNetworkApiKey = 'IXRW2956IFVPC8HY';
 
 // Just some random Latitudes and Longitudes where we pretend our sensors are.
 var coords = [{lat:52.069629,long:4.275921},{lat:52.075919,long:4.278144},{lat:52.075694,long:4.288126}];
@@ -36,12 +38,12 @@ var getApiKey = function(_id){
 var server = app.listen(3000,  '10.10.2.2',  function () {
     var host = server.address().address;
     var port = server.address().port;
-    console.log('Example app listening at http://%s:%s', host, port);
+    console.log('Server listening at http://%s:%s', host, port);
 });
 
 app.get('/', function (req, res) {
-  res.send('Hello World!');
-    console.log("Someone hit ur home page");
+  res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
+    console.log("Someone hit the home page");
 });
 
 var getRandomCoords = function(){
@@ -53,8 +55,8 @@ var getRandomCoords = function(){
 // accept POST request on the path that sensor will post to
 app.post('/api/sensor', function (req, res) {
     console.log("Got a post from " + req.ip);
-    if(!req.body.hasOwnProperty('temp') ||
-    !req.body.hasOwnProperty('nodeid'))  {
+    if(!req.body.hasOwnProperty('temperature') ||
+    !req.body.hasOwnProperty('nodeId'))  {
         res.statusCode = 400;
         console.log("POST was bad");
         return res.send('Error 400: Post syntax incorrect.');
@@ -62,15 +64,80 @@ app.post('/api/sensor', function (req, res) {
     }
 
     var sensorData = {
-        nodeId: req.body.nodeid,
+        nodeId: req.body.nodeId,
         nodeIpAddress: req.ip,
-        temp: req.body.temp
+        temperature: req.body.temperature,
+        meshAddress: req.body.meshAddress
+
     }
 console.log("Got this sensor data from the post" + sensorData.toString());
     res.send('Got a POST request');
 
     sendToCloud(sensorData);
 });
+
+// accept POST request on the path that gateway  will post to
+app.post('/api/gateway', function (req, res) {
+    console.log("Got a post from " + req.ip);
+    if(!req.body.hasOwnProperty('masterNodeId') ||
+        !req.body.hasOwnProperty('masterAddress'))  {
+        res.statusCode = 400;
+        console.log("POST was bad");
+        return res.send('Error 400: Post syntax incorrect.');
+
+    }
+console.log(req.body.masterNodeId);
+    console.log(req.body.masterAddress);
+    console.log(req.body.nodeIdList);
+    console.log(req.body.nodeAddressList);
+
+    res.send('Got a POST request');
+
+    var networkMap = {};
+    networkMap.field1 = req.body.masterNodeId;
+    networkMap.field2 = req.body.masterAddress;
+    networkMap.field3 = req.body.nodeIdList;
+    networkMap.field4 = req.body.nodeAddressList;
+
+    // Convert the sensorData to a string
+    var formData = querystring.stringify(networkMap);
+    var contentLength = formData.length;
+    console.log("sensor data is ready to be posted" + formData);
+    require('request-debug')(request);
+    // send a POST to thingspeak
+    request({
+        headers: {
+            'Content-Length': contentLength,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-THINGSPEAKAPIKEY': thingSpeakNetworkApiKey
+        },
+        uri: thingSpeakUri,
+        body: formData,
+        method: 'POST'
+    }, function (err, res, body) {
+        if (!err && res.statusCode == 200) {
+            console.log(body)
+        }
+        else {
+            console.log("Thingspeak Error: " + err);
+            console.log("Thingspeak response code: " + res.statusCode);
+            console.log("the body " + body)
+        }
+    });
+   /* var gatewayData = {
+        nodeId: req.body.nodeId,
+        nodeIpAddress: req.ip,
+        temperature: req.body.temperature,
+        meshAddress: req.body.meshAddress
+    }
+    console.log("Got a post from the gateway" + sensorData.toString());
+    res.send('Got a POST request');
+
+    sendToCloud(sensorData);*/
+});
+
+// A function to send the network map to the thing speak cloud
+
 
 // A function to send sensor data to the thing speak cloud service
 var sendToCloud = function(sensorData){
@@ -93,13 +160,15 @@ var sendToCloud = function(sensorData){
     // Need to replace the key names to thingspeak fields
     sensorData.field1 = sensorData.nodeId;
     sensorData.field2 = sensorData.nodeIpAddress;
-    sensorData.field3 = sensorData.temp;
+    sensorData.field3 = sensorData.temperature;
     sensorData.field4 = sensorData.location;
+    sensorData.field5 = sensorData.meshAddress;
 
     delete sensorData.nodeId;
     delete sensorData.nodeIpAddress;
-    delete sensorData.temp;
+    delete sensorData.temperature;
     delete sensorData.location;
+    delete sensorData.meshAddress;
 
 
 

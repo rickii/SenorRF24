@@ -107,19 +107,23 @@ EthernetClient client;
 
 void setup() {
 
-  Serial.begin(115200);
+  delay(5000);
+  Serial.begin(9600);
   // printf_begin();
   Serial.println("Start");
 
-  // Set the IP address we'll be using. The last octet mast match the nodeID (9)
-  IPAddress myIP(10, 10, 2, 4);
+  // Set the IP address we'll be using. The last octet will be used as the node id.
+  IPAddress myIP(10, 10, 2, 6);
   Ethernet.begin(myIP);
+  Serial.println("Attempting to connect to the RF24 mesh and obtain a mesh address...");
   mesh.begin();
-
+  
+  Serial.println("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + ("0" + (String)mesh.mesh_address));
+  
   // If you'll be making outgoing connections from the Arduino to the rest of
   // the world, you'll need a gateway set up.
-  IPAddress gwIP(10,10,2,2);
-  Ethernet.set_gateway(gwIP);
+  //IPAddress gwIP(10,10,2,2);
+  //Ethernet.set_gateway(gwIP);
 
 }
 
@@ -129,21 +133,15 @@ uint32_t reqTimer = 0;
 uint32_t mesh_timer = 0;
 
 // HTTP Server Settings
-IPAddress serverUri(10,10,2,2);
-const int updateInterval = 600 * 1000;      // Time interval in milliseconds to do a sensor read and send an update (number of seconds * 1000 = interval)
+IPAddress httpServer(10, 10, 2, 2);
+const int updateInterval = 20 * 1000;      // Time interval in milliseconds to do a sensor read and send an update (number of seconds * 1000 = interval)
 
 // Variable Setup
 long lastConnectionTime = 0;
 boolean lastConnected = false;
 int failedCounter = 0;
 
-// Setup up sensor variables
-int temperatureSensorPin = A0;    // select the input pin for the potentiometer
-int temperatureSensorValue = 0;  // variable to store the value coming from the sensor
-int tempWholePart = 0;
-int tempFractPart = 0;
-
-String nodeId = (String)4; // This will be sent with the POST data to help identify this node
+//String nodeId = (String)4;      // This will be sent with the POST data to help identify this node
 
 void loop() {
 
@@ -151,9 +149,15 @@ void loop() {
   // enable address renewal
   if (millis() - mesh_timer > 30000) { //Every 30 seconds, test mesh connectivity
     mesh_timer = millis();
+    Serial.println("Testing mesh connection");
     if ( ! mesh.checkConnection() ) {
       //refresh the network address
+      Serial.println("Not connected to mesh. Will attempt reconnect...");
       mesh.renewAddress();
+    }
+    
+    if (mesh.checkConnection()){
+    Serial.println("Connected to mesh");  
     }
   }
 
@@ -165,18 +169,26 @@ void loop() {
     Serial.print(c);
   }
 
-  // Disconnect from the server
+  // if the server's disconnected, stop the client:
   if (!client.connected() && lastConnected)
   {
-    Serial.println("...disconnected");
+    Serial.println("Server disconnected. Will stop the client");
     Serial.println();
-
     client.stop();
+    lastConnected = false;
   }
 
   // See if its time to send an update
   if (!client.connected() && (millis() - lastConnectionTime > updateInterval)) {
     Serial.println("Time to send an update");
+
+    // Setup up sensor variables
+    int temperatureSensorPin = A0;  // The pin the temp sesnor is connected to
+    int temperatureSensorValue = 0; // variable to store the value coming from the sensor
+    int tempWholePart = 0;          // The whole part of the temperature
+    int tempFractPart = 0;          // The fractional part of the temperature
+    String tempString = "";         // The string reresenation of the temperature
+    
     // Get 10 readings of the temperature sensor and average them
     for (byte i = 0; i < 10; i++)
     {
@@ -184,44 +196,35 @@ void loop() {
     }
     temperatureSensorValue = temperatureSensorValue / 10;
 
-    // Adjusted whole value
+    // Adjust the sensor value and get the whole and fractional parts
     temperatureSensorValue = 25 *  temperatureSensorValue - 2050;
     tempWholePart = temperatureSensorValue / 100;
     tempFractPart = temperatureSensorValue % 100;
 
-    String tempString = (String)tempWholePart + ".";
+    // Put the whole and fractional parts of the temp together in a string
+    tempString = (String)tempWholePart + ".";
     if (tempFractPart  < 10)
     {
       tempString = tempString + "0";
     }
-
     tempString = tempString + (String)tempFractPart;
-    Serial.println("Will send" + tempString + " " + nodeId);
-    // Call the send method
-    sendSensorData(tempString, nodeId);
-
+    
+    Serial.println("Temperature: " + tempString);
+    
+    // Pass the temp string to the the send method
+    sendSensorData(tempString);
   }
-  else {
-    //Serial.print("Not ready for an update yet");
-  }
-  // Reset all our readings
-temperatureSensorValue = 0; 
-tempWholePart = 0;
-tempFractPart = 0;
-
-
-  lastConnected = client.connected();
-
   // We can do other things in the loop, but be aware that the loop will
   // briefly pause while IP data is being processed.
 }
 
-void sendSensorData(String tempData, String nodeId)
+void sendSensorData(String tempString)
 {
   // concatenate all the data into a single string of key value pairs
-  String formData = "temp=" + tempData + "&nodeid=" + nodeId;
+  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + ("0" + (String)mesh.mesh_address);
+  Serial.println("Data to send: " + formData);
 
-  if (client.connect(serverUri, 3000))
+  if (client.connect(httpServer, 3000))
   {
     client.print("POST /api/sensor HTTP/1.1\n");
     client.print("Host: 10.10.2.2\n");
@@ -237,6 +240,7 @@ void sendSensorData(String tempData, String nodeId)
 
     if (client.connected())
     {
+      lastConnected = client.connected();
       Serial.println("POSTing data...");
       Serial.println();
 
@@ -255,7 +259,7 @@ void sendSensorData(String tempData, String nodeId)
   {
     failedCounter++;
 
-    Serial.println("Connection to server Failed spciall(" + String(failedCounter, DEC) + ")");
+    Serial.println("Connection to server failed (" + String(failedCounter, DEC) + ")");
     Serial.println();
 
     lastConnectionTime = millis();
