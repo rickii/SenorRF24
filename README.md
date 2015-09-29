@@ -1,4 +1,4 @@
-# SenorRF24
+# SensorRF24
 
 Sensor Node Greg
 https://thingspeak.com/channels/57797
