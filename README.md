@@ -1,5 +1,7 @@
 # SensorRF24
 
+Documentation can be found at http://github.com/rickii/SensorRF24/wiki 
+
 Sensor Node Greg
 https://thingspeak.com/channels/57797
 
