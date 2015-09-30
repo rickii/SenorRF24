@@ -32,7 +32,6 @@
 <script type='text/javascript' src='https://www.google.com/jsapi'></script>
 <script type='text/javascript'>
     var chart;
-    //var charts;
     var data;
 
     google.load('visualization', '1', {packages: ['orgchart']});
@@ -79,11 +78,6 @@
             }, '', 'Node Id: ' + master.id + '\nAddress: ' + master.address]);
 
             if (nodes !=null && nodes.length >= 1) {
-                // var nodes = [];
-                //  var nodeIDs = data.field3.split(',');
-                //  var nodeAddresses = data.field4.split(',');
-                //  var nodeAlive = JSON.parse(data.field5);
-
                 for (var index = 0; index < nodes.length; ++index) {
                     var node = nodes[index];
                     // Determine the parent for this node: example node 043 has parent 03. node 0125 has parent 025
@@ -101,20 +95,6 @@
                         f: 'Node Id: ' + node.id + '\nAddress: ' + node.add + '<br><div><span>Alive: </span><span style="color:red; font-weight:bold">' + node.act + '</span></div>'
                     }, node.parent, 'Node Id: ' + node.id + '\nAddress: ' + node.add]);
                 }
-                /*
-                 for (var index = 0; index < nodes.length; ++index) {
-                 var k = nodes[index];
-                 var alive = k.alive ? 'Yes' : 'No';
-                 networkMap.push([{
-                 v: k.nodeAddress,
-                 f: 'Node Id: ' + k.nodeId + '\nAddress: ' + k.nodeAddress + '<br><div><span>Alive: </span><span style="color:red; font-weight:bold">' + alive + '</span></div>'
-                 }, k.parent, 'Node Id: ' + k.nodeId + '\nAddress: ' + k.nodeAddress]);
-                 }
-                 }*/
-                /* for (var index = 0; index < data.feeds.length; ++index){
-                 var k = data.feeds[index];
-                 sensorData.push([k.created_at !== null ? new Date(k.created_at) : null, k.field3 !==null ? Number(k.field3) : null, k.field1 !== null ? Number(k.field1) : null, k.field2 !==null ? k.field2 : null, k.field5!== null ? k.field5 : null ]);
-                 };*/
             }
             displayData(networkMap);
         });
@@ -133,9 +113,7 @@
             allowHtml: true
         };
 
-
         loadData();
-
         setInterval('loadData()', 15000);
     }
 </script>

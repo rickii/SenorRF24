@@ -113,7 +113,7 @@ void setup() {
   Serial.println("Start");
 
   //*** Set the IP address for the Node. The last octet will be used as the Node Id. Needs to be in same subnet as Gateway node. ***//
-  IPAddress myIP(10, 10, 2, 170);
+  IPAddress myIP(10, 10, 2, 150);
 
   Ethernet.begin(myIP);
   Serial.println("Attempting to connect to the RF24 mesh and obtain a mesh address...");

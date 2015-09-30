@@ -16,7 +16,7 @@ var queryString = require('querystring');
 var ping = require('ping');
 
 // Each thingspeak channel has a separate api key, this array allows us to map between our sensor Node Id and the api key.
-var thingSpeakChannels = [{_id: 4, apiKey: '4BLDCMJ2KGMKCRGN'}, {_id: 6, apiKey: 'J7EMRJYR7YIA0Z7N'}];
+var thingSpeakChannels = [{_id: 65, apiKey: '4BLDCMJ2KGMKCRGN'}, {_id: 150, apiKey: 'J7EMRJYR7YIA0Z7N'}];
 
 // This is a thing speak channel that is used to display all nodes in a network.
 var thingSpeakNetworkApiKey = 'IXRW2956IFVPC8HY';
@@ -85,7 +85,7 @@ app.post('/api/sensor', function (req, res) {
  *
  */
 app.post('/api/gateway', function (req, res) {
-    console.log("Got a post from " + req.ip);
+    //console.log("Got a post from " + req.ip);
     if (!req.body.hasOwnProperty('masterNodeId') || !req.body.hasOwnProperty('masterAddress') || !req.body.hasOwnProperty('nodeList')) {
         res.statusCode = 400;
         //console.log("POST was bad");
@@ -104,15 +104,15 @@ var processSensorData = function (requestData) {
     // Build an object of relevant data from the request
     // The field numbers directly refer to the fields setup on thing speak
     var sensorData = {
-        field1: req.body.nodeId,
-        field2: req.ip,
-        field3: req.body.temperature,
-        field5: req.body.meshAddress
+        field1: requestData.body.nodeId,
+        field2: requestData.ip,
+        field3: requestData.body.temperature,
+        field5: requestData.body.meshAddress
     }
     // If the node sent lat and long then use it otherwise mock it
-    if (req.body.lat != null && req.body.long != null) {
-        sensorData.lat = req.body.lat;
-        sensorData.long = req.body.long;
+    if (requestData.body.lat != null && requestData.body.long != null) {
+        sensorData.lat = requestData.body.lat;
+        sensorData.long = requestData.body.long;
     }
     else {
         var position = getRandomCoords();
@@ -131,47 +131,48 @@ var processSensorData = function (requestData) {
 };
 
 /*
-*   A function to process the data received from the RF24 gateway node
+ *   A function to process the data received from the RF24 gateway node
  */
-var processGatewayData = function(requestData){
+var processGatewayData = function (requestData) {
 
+    // We create a networkMap object that will hold our master and child nodes
     var networkMap = [];
     networkMap.field1 = {
-        id: req.body.masterNodeId,
-        address: req.body.masterAddress,
-        ipAddress: req.ip
+        id: requestData.body.masterNodeId,
+        address: requestData.body.masterAddress,
+        ipAddress: requestData.ip
     };
 
     var nodeList;
-    // Get posted data to a new variable
-    if (req.body.nodeList != "") {
-        nodeList = [].concat(req.body.nodeList.split('||'));
+    // Check that there is actually some nodes
+    if (requestData.body.nodeList != "") {
 
-        console.log('There are ' + nodeList.length + ' nodes.');
+        // Add all the nodes to an empty array, split the list on each '||'
+        nodeList = [].concat(requestData.body.nodeList.split('||'));
 
-        for (var i = 0; i < nodeList.length; i++) {
-            console.log('Got node: ' + nodeList[i]);
-        }
+        // Get the first 3 octets of the gateways ip address.
+        // The IP address of a node is the the mask plus the Node Id
+        var ipAddressMask = requestData.ip.substring(0, requestData.ip.lastIndexOf('.') + 1);
 
         // We will fill this array with node objects
         var nodes = [];
 
-        var ipAddressMask = req.ip.substring(0, req.ip.lastIndexOf('.') + 1);
-        console.log("ip mask" + ipAddressMask);
-
+        // Add each of the nodes to a node object and push it into the nodes array
         for (var i = 0; i < nodeList.length; i++) {
             var node = nodeList[i].split('|');
-            console.log('Node is: ' + node);
+            // id is the Node Id. add is the node address. ip is the nodes IP address. act is a flag for active
             nodes.push({id: node[0], add: node[1], ip: ipAddressMask + node[0], act: 0});
         }
 
+        // add the nodes array to the networkMap
         networkMap.field2 = nodes;
 
+        // If we have some nodes then pass the networkMap to a function to check if each node is active
         if (nodes.length > 0) {
             checkNodeAlive(networkMap);
         }
     }
-    else {
+    else { // We don't have any nodes so go direct to the map builder
         networkMapBuild(networkMap);
     }
 };
@@ -183,6 +184,7 @@ var processGatewayData = function(requestData){
  *
  *      After all nodes have been checked passes the networkMap to a function to
  *      ready it for POSTing to thing speak.
+ *
  */
 var checkNodeAlive = function (networkMap) {
     var nodesCount = networkMap.field2.length;
@@ -192,7 +194,7 @@ var checkNodeAlive = function (networkMap) {
         var ip = networkMap.field2[i].ip;
         ping.promise.probe(ip)
             .then(function (res) {
-                console.log(res);
+                //console.log(res);
                 for (var i = 0; i < nodesCount; i++) {
                     if (res.host == networkMap.field2[i].ip) {
                         networkMap.field2[i].act = res.alive ? 1 : 0;
@@ -209,8 +211,9 @@ var checkNodeAlive = function (networkMap) {
 };
 
 /*
-*   A function that takes networkMap of all the nodes in the mesh network
-  *   and prepares it to be POSTed to thing speak.
+ *   A function that takes networkMap of all the nodes in the mesh network
+ *   and prepares it to be POSTed to thing speak.
+ *
  */
 var networkMapBuild = function (networkMap) {
 
@@ -249,16 +252,19 @@ var networkMapBuild = function (networkMap) {
     sendToThingSpeak(formData, thingSpeakNetworkApiKey);
 };
 
-
-
-
-// A function to send data to the thing speak cloud service
+/*
+ *   A function to send data to the thing speak cloud service.
+ *
+ *   Takes a HTML formatted string and an apiKey and
+ *   builds a POST request using the 'request' library
+ *
+ */
 var sendToThingSpeak = function (formData, apiKey) {
 
     var contentLength = formData.length;
-    console.log("sensor data is ready to be posted" + formData);
-    require('request-debug')(request);
-    // send a POST to thingspeak
+
+    // Uncomment this line to get debug output to the console to help troubleshoot requests
+    //require('request-debug')(request);
     request({
         headers: {
             'Content-Length': contentLength,
@@ -269,19 +275,21 @@ var sendToThingSpeak = function (formData, apiKey) {
         body: formData,
         method: 'POST'
     }, function (err, res, body) {
-        if (!err && res.statusCode == 200) {
-            console.log(body)
+       /* if (!err && res.statusCode == 200) {
+            // console.log(body)
         }
         else {
-            console.log("Thingspeak Error: " + err);
-            console.log("Thingspeak response code: " + res.statusCode);
-            console.log("the body " + body)
-        }
+            //console.log("Thingspeak Error: " + err);
+            //console.log("Thingspeak response code: " + res.statusCode);
+            // console.log("Response body: " + body)
+        }*/
     });
 };
 
 /*
- *   A function that takes a Node Id and finds the matching apiKey from the thingSpeakChannels array
+ *   A function that takes a Node Id and finds the matching apiKey
+ *   from the thingSpeakChannels array
+ *
  */
 var getApiKey = function (_id) {
     var len = thingSpeakChannels.length;
@@ -295,7 +303,9 @@ var getApiKey = function (_id) {
 };
 
 /*
- *   A function that returns a random set of coordinates from the coords array
+ *   A function that returns a random set
+ *   of coordinates from the coords array
+ *
  */
 var getRandomCoords = function () {
     var index = Math.floor((Math.random() * coords.length));
