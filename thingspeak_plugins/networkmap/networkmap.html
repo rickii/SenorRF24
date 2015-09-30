@@ -14,10 +14,18 @@
 </html>
 
 <style type="text/css">
-    body { background-color: #ddd; margin: 0; padding: 0;}
-    #table_div { height: 100%; width: 100%; display: table;}
-</style>
+    body {
+        background-color: #ddd;
+        margin: 0;
+        padding: 0;
+    }
 
+    #table_div {
+        height: 100%;
+        width: 100%;
+        display: table;
+    }
+</style>
 
 
 <script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
@@ -27,12 +35,12 @@
     //var charts;
     var data;
 
-    google.load('visualization', '1', {packages:['orgchart']});
+    google.load('visualization', '1', {packages: ['orgchart']});
     google.setOnLoadCallback(initChart);
 
     function displayData(sensorData) {
 
-        if (data.getNumberOfRows()){
+        if (data.getNumberOfRows()) {
             data.removeRows(0, 10);
         }
         data.addRows(sensorData);
@@ -43,29 +51,57 @@
 
         var networkMap = [];
         var channel_id = window.parent.location.pathname.match(/\d+/g);
-        $.getJSON('https://api.thingspeak.com/channels/' + channel_id + '/feed/last.json', function(data) {
-            networkMap.push([{v: data.field2, f:'Master\nNode Id: ' + data.field1 + '\nAddress: ' + data.field2},'','Node Id: ' + data.field1 + '\nAddress: ' + data.field2]);
-           var nodes = [];
-           var nodeIDs = data.field3.split(',');
-           var nodeAddresses = data.field4.split(',');
+        $.getJSON('https://api.thingspeak.com/channels/' + channel_id + '/feed/last.json', function (data) {
+            //var created_at = data.created_at;
+            var master = JSON.parse(data.field1);
+            var nodes;
+            if (data.field2!=null){
+                nodes = JSON.parse(data.field2);
+            }
 
-            for (var index = 0; index < nodeIDs.length; ++index){
-                var parent = nodeAddresses[index].substring(0,nodeAddresses[index].length-1);
-                if (parent.length==1){
+            networkMap.push([{
+                v: master.address,
+                f: 'Master\nNode Id: ' + master.id + '\nAddress: ' + master.address
+            }, '', 'Node Id: ' + master.id + '\nAddress: ' + master.address]);
+
+            if (nodes !=null && nodes.length >= 1) {
+                // var nodes = [];
+                //  var nodeIDs = data.field3.split(',');
+                //  var nodeAddresses = data.field4.split(',');
+                //  var nodeAlive = JSON.parse(data.field5);
+
+                for (var index = 0; index < nodes.length; ++index) {
+                    var node = nodes[index];
+                    // Determine the parent for this node: example node 043 has parent 03. node 0125 has parent 025
+                    var parent = node.address.substring(2, node.address.length);
                     parent = "0" + parent;
+                    if (parent.length == 1) {
+                        parent = "0" + parent;
+                    }
+
+                    node.parent = parent;
+                    node.alive = node.alive ? 'Yes' : 'No';
+
+                    networkMap.push([{
+                        v: node.address,
+                        f: 'Node Id: ' + node.id + '\nAddress: ' + node.address + '<br><div><span>Alive: </span><span style="color:red; font-weight:bold">' + node.alive + '</span></div>'
+                    }, node.parent, 'Node Id: ' + node.id + '\nAddress: ' + node.address]);
                 }
-                nodes.push({nodeId:nodeIDs[index],nodeAddress:nodeAddresses[index],parent:parent});
+                /*
+                 for (var index = 0; index < nodes.length; ++index) {
+                 var k = nodes[index];
+                 var alive = k.alive ? 'Yes' : 'No';
+                 networkMap.push([{
+                 v: k.nodeAddress,
+                 f: 'Node Id: ' + k.nodeId + '\nAddress: ' + k.nodeAddress + '<br><div><span>Alive: </span><span style="color:red; font-weight:bold">' + alive + '</span></div>'
+                 }, k.parent, 'Node Id: ' + k.nodeId + '\nAddress: ' + k.nodeAddress]);
+                 }
+                 }*/
+                /* for (var index = 0; index < data.feeds.length; ++index){
+                 var k = data.feeds[index];
+                 sensorData.push([k.created_at !== null ? new Date(k.created_at) : null, k.field3 !==null ? Number(k.field3) : null, k.field1 !== null ? Number(k.field1) : null, k.field2 !==null ? k.field2 : null, k.field5!== null ? k.field5 : null ]);
+                 };*/
             }
-
-            for (var index = 0; index < nodes.length; ++index) {
-            var k =  nodes[index];
-            networkMap.push([{v: k.nodeAddress, f: 'Node Id: ' + k.nodeId + '\nAddress: ' + k.nodeAddress},k.parent,'Node Id: ' + k.nodeId + '\nAddress: ' + k.nodeAddress]);
-            }
-
-           /* for (var index = 0; index < data.feeds.length; ++index){
-                var k = data.feeds[index];
-                sensorData.push([k.created_at !== null ? new Date(k.created_at) : null, k.field3 !==null ? Number(k.field3) : null, k.field1 !== null ? Number(k.field1) : null, k.field2 !==null ? k.field2 : null, k.field5!== null ? k.field5 : null ]);
-            };*/
             displayData(networkMap);
         });
     }
@@ -79,9 +115,9 @@
 
         chart = new google.visualization.OrgChart(document.getElementById('table_div'));
         options = {
-            size: 'small'
+            size: 'small',
+            allowHtml: true
         };
-
 
 
         loadData();

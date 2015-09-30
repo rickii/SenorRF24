@@ -113,17 +113,18 @@ void setup() {
   Serial.println("Start");
 
   // Set the IP address we'll be using. The last octet will be used as the node id.
-  IPAddress myIP(10, 10, 2, 6);
+  IPAddress myIP(10, 10, 2, 45);
   Ethernet.begin(myIP);
   Serial.println("Attempting to connect to the RF24 mesh and obtain a mesh address...");
   mesh.begin();
-  
-  Serial.println("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + ("0" + (String)mesh.mesh_address));
+  String meshAddress = (String)(mesh.mesh_address,OCT);
+  Serial.print("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + "0" + String(mesh.mesh_address,OCT) + " Parent address is " + "0" + String(network.parent(),OCT));
   
   // If you'll be making outgoing connections from the Arduino to the rest of
   // the world, you'll need a gateway set up.
   //IPAddress gwIP(10,10,2,2);
   //Ethernet.set_gateway(gwIP);
+
 
 }
 
@@ -154,6 +155,7 @@ void loop() {
       //refresh the network address
       Serial.println("Not connected to mesh. Will attempt reconnect...");
       mesh.renewAddress();
+  Serial.print("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + "0" + String(mesh.mesh_address,OCT));
     }
     
     if (mesh.checkConnection()){
@@ -221,7 +223,7 @@ void loop() {
 void sendSensorData(String tempString)
 {
   // concatenate all the data into a single string of key value pairs
-  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + ("0" + (String)mesh.mesh_address);
+  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address,OCT) + "&meshParent=0" + String(network.parent(),OCT);
   Serial.println("Data to send: " + formData);
 
   if (client.connect(httpServer, 3000))

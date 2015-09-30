@@ -14,11 +14,18 @@
 </html>
 
 <style type="text/css">
-    body { background-color: #ddd; margin: 0; padding: 0;}
-    #table_div { height: 100%; width: 100%; display: table;}
+    body {
+        background-color: #ddd;
+        margin: 0;
+        padding: 0;
+    }
+
+    #table_div {
+        height: 100%;
+        width: 100%;
+        display: table;
+    }
 </style>
-
-
 
 
 <script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
@@ -28,12 +35,12 @@
     //var charts;
     var data;
 
-    google.load('visualization', '1', {packages:['table']});
+    google.load('visualization', '1', {packages: ['table']});
     google.setOnLoadCallback(initChart);
 
     function displayData(sensorData) {
 
-        if (data.getNumberOfRows()){
+        if (data.getNumberOfRows()) {
             data.removeRows(0, 10);
         }
         data.addRows(sensorData);
@@ -46,11 +53,39 @@
 
         var sensorData = [];
         var channel_id = window.parent.location.pathname.match(/\d+/g);
-        $.getJSON('https://api.thingspeak.com/channels/' + channel_id + '/feed.json?results=10', function(data) {
-            for (var index = 0; index < data.feeds.length; ++index){
-                var k = data.feeds[index];
-                sensorData.push([k.created_at !== null ? new Date(k.created_at) : null, k.field1 !==null ? k.field1 : null, k.field2 !== null ? k.field2 : null, k.field3 !==null ? k.field3 : null, k.field4!== null ? k.field4 : null ]);
-            };
+        $.getJSON('https://api.thingspeak.com/channels/' + channel_id + '/feed.json?results=10', function (data) {
+
+            for (var index = 0; index < data.feeds.length; ++index) {
+                var created_at = data.feeds[index].created_at;
+                var master = JSON.parse(data.feeds[index].field1);
+                var nodes;
+                if (data.feeds[index]!=null){
+                    nodes = JSON.parse(data.feeds[index].field2);
+                }
+
+                /*
+                 id: node[0], address: node[1], ipAddress: ipAddressMask + node[0], alive: false
+                 */
+                var childIds = [];
+                var childAddresses = [];
+                if (nodes != null ) {
+                    for (var i = 0; i < nodes.length; i++) {
+                        childIds.push(nodes[i].id);
+                    }
+                    childIds = childIds.toString();
+
+                    for (var i = 0; i < nodes.length; i++) {
+                        childAddresses.push(nodes[i].address);
+                    }
+                    childAddresses = childAddresses.toString();
+                }
+                else{
+                    childIds = "";
+                    childAddresses = "";
+                }
+                sensorData.push([created_at !== null ? new Date(created_at) : null, master.id !== null ? master.id : null, master.address !== null ? master.address : null, childIds !== "" ? childIds : null, childAddresses !== "" ? childAddresses : null]);
+            }
+            ;
             displayData(sensorData);
         });
     }
@@ -71,7 +106,6 @@
             sortColumn: 0,
             sortAscending: false
         };
-
 
 
         loadData();
