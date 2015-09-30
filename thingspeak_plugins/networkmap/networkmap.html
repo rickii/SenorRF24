@@ -41,7 +41,7 @@
     function displayData(sensorData) {
 
         if (data.getNumberOfRows()) {
-            data.removeRows(0, 10);
+            data.removeRows(0, 255);
         }
         data.addRows(sensorData);
         chart.draw(data, options);
@@ -51,12 +51,26 @@
 
         var networkMap = [];
         var channel_id = window.parent.location.pathname.match(/\d+/g);
-        $.getJSON('https://api.thingspeak.com/channels/' + channel_id + '/feed/last.json', function (data) {
-            //var created_at = data.created_at;
-            var master = JSON.parse(data.field1);
+        $.getJSON('https://api.thingspeak.com/channels/' + channel_id + '/feed/last.json?key=ABJV25NX3ENQOAM4', function (data) {
+            var created_at = data.created_at;
+            var master;
             var nodes;
-            if (data.field2!=null){
-                nodes = JSON.parse(data.field2);
+            if (data!=null){ // Check that there is some data in this feed
+                if (data.field1 !=null){
+                    master = JSON.parse(data.field1);
+                }
+                if (data.field2 != null){
+                    nodes = JSON.parse(data.field2);
+                }
+                // check the other fields for nodes
+                for (var i=4; i< Object.keys(data).length; i++){
+                    var fieldName = Object.keys(data)[i];
+                    if (data[fieldName] != null){
+                        var fieldValue = data[fieldName];
+                        var newNodes = JSON.parse(fieldValue);
+                        nodes = nodes.concat(newNodes);
+                    }
+                }
             }
 
             networkMap.push([{
@@ -73,19 +87,19 @@
                 for (var index = 0; index < nodes.length; ++index) {
                     var node = nodes[index];
                     // Determine the parent for this node: example node 043 has parent 03. node 0125 has parent 025
-                    var parent = node.address.substring(2, node.address.length);
+                    var parent = node.add.substring(2, node.add.length);
                     parent = "0" + parent;
                     if (parent.length == 1) {
                         parent = "0" + parent;
                     }
 
                     node.parent = parent;
-                    node.alive = node.alive ? 'Yes' : 'No';
+                    node.act = node.act ? 'Yes' : 'No';
 
                     networkMap.push([{
-                        v: node.address,
-                        f: 'Node Id: ' + node.id + '\nAddress: ' + node.address + '<br><div><span>Alive: </span><span style="color:red; font-weight:bold">' + node.alive + '</span></div>'
-                    }, node.parent, 'Node Id: ' + node.id + '\nAddress: ' + node.address]);
+                        v: node.add,
+                        f: 'Node Id: ' + node.id + '\nAddress: ' + node.add + '<br><div><span>Alive: </span><span style="color:red; font-weight:bold">' + node.act + '</span></div>'
+                    }, node.parent, 'Node Id: ' + node.id + '\nAddress: ' + node.add]);
                 }
                 /*
                  for (var index = 0; index < nodes.length; ++index) {

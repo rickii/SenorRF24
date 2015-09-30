@@ -57,15 +57,26 @@
 
             for (var index = 0; index < data.feeds.length; ++index) {
                 var created_at = data.feeds[index].created_at;
-                var master = JSON.parse(data.feeds[index].field1);
+                var master;
                 var nodes;
-                if (data.feeds[index]!=null){
-                    nodes = JSON.parse(data.feeds[index].field2);
+                if (data.feeds[index]!=null){ // Check that there is some data in this feed
+                    if (data.feeds[index].field1 !=null){
+                        master = JSON.parse(data.feeds[index].field1);
+                    }
+                    if (data.feeds[index].field2 != null){
+                        nodes = JSON.parse(data.feeds[index].field2);
+                    }
+                    // check the other fields for nodes
+                    for (var i=4; i< Object.keys(data.feeds[index]).length; i++){
+                        var fieldName = Object.keys(data.feeds[index])[i];
+                        if (data.feeds[index][fieldName] != null){
+                            var fieldValue = data.feeds[index][fieldName];
+                            var newNodes = JSON.parse(fieldValue);
+                            nodes = nodes.concat(newNodes);
+                        }
+                    }
                 }
 
-                /*
-                 id: node[0], address: node[1], ipAddress: ipAddressMask + node[0], alive: false
-                 */
                 var childIds = [];
                 var childAddresses = [];
                 if (nodes != null ) {
@@ -75,7 +86,7 @@
                     childIds = childIds.toString();
 
                     for (var i = 0; i < nodes.length; i++) {
-                        childAddresses.push(nodes[i].address);
+                        childAddresses.push(nodes[i].add);
                     }
                     childAddresses = childAddresses.toString();
                 }

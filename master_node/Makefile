@@ -1,16 +1,16 @@
 #############################################################################
 #
-# Makefile for librf24gateway examples on Raspberry Pi
+# Makefile for master_node gateway on Raspberry Pi
 #
 # By:  TMRh20
 # Date:    2013/09
 #
 # Description:
 # ------------
-# use make all and make install to install the examples
-# You can change the install directory by editing the prefix line
+# use make to build master_node
+# Run compiled program with: sudo ./master_node
 #
-prefix := /usr/local
+
 
 # Detect the Raspberry Pi from cpuinfo
 #Count the matches for BCM2708 or BCM2709 in cpuinfo
@@ -28,22 +28,13 @@ CCFLAGS+=-Ofast -mfpu=vfp -mfloat-abi=hard -mtune=arm1176jzf-s
 endif
 
 # define all programs
-PROGRAMS = RF24GatewayNode
+PROGRAMS = master_node
 SOURCES = ${PROGRAMS:=.cpp}
 
 all: ${PROGRAMS}
 
 ${PROGRAMS}: ${SOURCES}
-	g++ ${CCFLAGS} -Wall -I../ -lrf24-bcm -lrf24network -lrf24mesh -lrf24gateway $@.cpp -o $@
+	g++ ${CCFLAGS} -Wall -I../ -lrf24-bcm -lrf24network -lrf24mesh -lrf24gateway -lcurl $@.cpp -o $@
 
 clean:
 	rm -rf $(PROGRAMS)
-
-install: all
-	test -d $(prefix) || mkdir $(prefix)
-	test -d $(prefix)/bin || mkdir $(prefix)/bin
-	for prog in $(PROGRAMS); do \
-	  install -m 0755 $$prog $(prefix)/bin; \
-	done
-
-.PHONY: install

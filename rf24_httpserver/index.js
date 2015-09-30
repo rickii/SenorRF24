@@ -105,13 +105,13 @@ var checkNodeAlive = function (networkMap) {
     console.log('hoe many nodes to check: ' + nodesCount);
 
     for (var i = 0; i < nodesCount; i++) {
-        var ipAddress = networkMap.field2[i].ipAddress;
-        ping.promise.probe(ipAddress)
+        var ip = networkMap.field2[i].ip;
+        ping.promise.probe(ip)
             .then(function (res) {
                 console.log(res);
                 for (var i = 0; i < nodesCount; i++) {
-                    if (res.host == networkMap.field2[i].ipAddress) {
-                        networkMap.field2[i].alive = res.alive;
+                    if (res.host == networkMap.field2[i].ip) {
+                        networkMap.field2[i].act = res.alive ? 1 : 0;
                     }
                 }
                 nodesChecked++;
@@ -176,6 +176,22 @@ var checkNodeAlive = function (networkMap) {
 var networkMapBuild = function (networkMap) {
 
     if (networkMap.field2 != null) {
+        //Strip the ip address field from each node to make the object smaller
+        for (var i = 0; i<networkMap.field2.length; i++){
+            delete networkMap.field2[i].ip;
+        }
+        var usedFieldCount = 2;
+        // We can only send 6 nodes in each channel due to a 400 character limit by thingspeak
+        while (networkMap.field2.length>6){
+            //var field = 'field' +usedFieldCount+1;
+            networkMap['field' + (usedFieldCount+1)] = networkMap.field2.splice(6,networkMap.field2.length-6);
+            networkMap['field' + (usedFieldCount+1)] = JSON.stringify(networkMap['field' + (usedFieldCount+1)]);
+            usedFieldCount++;
+            if (usedFieldCount==8){
+                // just remove the rest of the nodes as we thingspeak cant store them
+                networkMap.field2.splice(6,networkMap.field2.length);
+            }
+        }
         networkMap.field2 = JSON.stringify(networkMap.field2);
     }
     networkMap.field1 = JSON.stringify(networkMap.field1);
@@ -234,7 +250,7 @@ app.post('/api/gateway', function (req, res) {
         for (var i = 0; i < nodeList.length; i++) {
             var node = nodeList[i].split('|');
             console.log('Node is: ' + node);
-            nodes.push({id: node[0], address: node[1], ipAddress: ipAddressMask + node[0], alive: false});
+            nodes.push({id: node[0], add: node[1], ip: ipAddressMask + node[0], act: 0});
         }
 
         networkMap.field2 = nodes;
