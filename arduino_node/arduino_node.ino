@@ -81,7 +81,7 @@
  * 2. Edit the RF24Networl_config.h file
  * 3. Un-comment #define DISABLE_USER_PAYLOADS
  *
- * This example connects to google and downloads the index page
+ *
  */
 
 
@@ -112,20 +112,18 @@ void setup() {
   // printf_begin();
   Serial.println("Start");
 
-  // Set the IP address we'll be using. The last octet will be used as the node id.
-  IPAddress myIP(10, 10, 2, 45);
+  //*** Set the IP address for the Node. The last octet will be used as the Node Id. Needs to be in same subnet as Gateway node. ***//
+  IPAddress myIP(10, 10, 2, 150);
+
   Ethernet.begin(myIP);
   Serial.println("Attempting to connect to the RF24 mesh and obtain a mesh address...");
   mesh.begin();
-  String meshAddress = (String)(mesh.mesh_address,OCT);
-  Serial.print("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + "0" + String(mesh.mesh_address,OCT) + " Parent address is " + "0" + String(network.parent(),OCT));
-  
+  Serial.print("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + "0" + String(mesh.mesh_address, OCT) + " Parent address is " + "0" + String(network.parent(), OCT));
+
   // If you'll be making outgoing connections from the Arduino to the rest of
   // the world, you'll need a gateway set up.
   //IPAddress gwIP(10,10,2,2);
   //Ethernet.set_gateway(gwIP);
-
-
 }
 
 uint32_t counter = 0;
@@ -133,13 +131,15 @@ uint32_t reqTimer = 0;
 
 uint32_t mesh_timer = 0;
 
-// HTTP Server Settings
+// The server that the node will send a POST of its sensor data
 IPAddress httpServer(10, 10, 2, 2);
-const int updateInterval = 20 * 1000;      // Time interval in milliseconds to do a sensor read and send an update (number of seconds * 1000 = interval)
 
-// Variable Setup
+// Time interval in milliseconds to do a sensor read and send an update (number of seconds * 1000 = interval)
+const int updateInterval = 20 * 1000;
+
+// Variables to control connection to server
 long lastConnectionTime = 0;
-boolean lastConnected = false;
+boolean connectedOnLastAttempt = false;
 int failedCounter = 0;
 
 //String nodeId = (String)4;      // This will be sent with the POST data to help identify this node
@@ -155,11 +155,11 @@ void loop() {
       //refresh the network address
       Serial.println("Not connected to mesh. Will attempt reconnect...");
       mesh.renewAddress();
-  Serial.print("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + "0" + String(mesh.mesh_address,OCT));
+      Serial.print("Connected to the mesh. NodeId is: " + (String)mesh.getNodeID() + " Mesh address is " + "0" + String(mesh.mesh_address, OCT));
     }
-    
-    if (mesh.checkConnection()){
-    Serial.println("Connected to mesh");  
+
+    if (mesh.checkConnection()) {
+      Serial.println("Connected to mesh");
     }
   }
 
@@ -171,13 +171,13 @@ void loop() {
     Serial.print(c);
   }
 
-  // if the server's disconnected, stop the client:
-  if (!client.connected() && lastConnected)
+  // if we are no longer connected to the server's then stop the client:
+  if (!client.connected() && connectedOnLastAttempt)
   {
     Serial.println("Server disconnected. Will stop the client");
     Serial.println();
     client.stop();
-    lastConnected = false;
+    connectedOnLastAttempt = false;
   }
 
   // See if its time to send an update
@@ -190,7 +190,7 @@ void loop() {
     int tempWholePart = 0;          // The whole part of the temperature
     int tempFractPart = 0;          // The fractional part of the temperature
     String tempString = "";         // The string reresenation of the temperature
-    
+
     // Get 10 readings of the temperature sensor and average them
     for (byte i = 0; i < 10; i++)
     {
@@ -210,10 +210,10 @@ void loop() {
       tempString = tempString + "0";
     }
     tempString = tempString + (String)tempFractPart;
-    
+
     Serial.println("Temperature: " + tempString);
-    
-    // Pass the temp string to the the send method
+
+    // Pass the temperature to the the sendSensorData method
     sendSensorData(tempString);
   }
   // We can do other things in the loop, but be aware that the loop will
@@ -222,8 +222,8 @@ void loop() {
 
 void sendSensorData(String tempString)
 {
-  // concatenate all the data into a single string of key value pairs
-  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address,OCT) + "&meshParent=0" + String(network.parent(),OCT);
+  // concatenate all the data into a single string of key value pairs tht can be sent in the POST
+  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address, OCT) + "&meshParent=0" + String(network.parent(), OCT);
   Serial.println("Data to send: " + formData);
 
   if (client.connect(httpServer, 3000))
@@ -242,7 +242,7 @@ void sendSensorData(String tempString)
 
     if (client.connected())
     {
-      lastConnected = client.connected();
+      connectedOnLastAttempt = client.connected();
       Serial.println("POSTing data...");
       Serial.println();
 
