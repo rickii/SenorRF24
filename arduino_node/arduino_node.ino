@@ -1,79 +1,17 @@
 /*
  * *************************************************************************
- * RF24Ethernet Arduino library by TMRh20 - 2014-2015
+ * arduino_node.ino
  *
- * Automated (mesh) wireless networking and TCP/IP communication stack for RF24 radio modules
+ * Arduino Micro with nRF24 wireless used as a sensor node with a MPC9701 
+ * temperature sensor.
  *
- * RF24 -> RF24Network -> UIP(TCP/IP) -> RF24Ethernet
- *                     -> RF24Mesh
  *
- *      Documentation: http://tmrh20.github.io/RF24Ethernet/
- *
- * *************************************************************************
- *
- * What it does?:
- *
- * RF24Ethernet allows tiny Arduino-based sensors to automatically
- * form and maintain an interconnected, wireless mesh network capable of utilizing
- * standard (TCP/IP) protocols for communication. ( Nodes can also use
- * the underlying RF24Network/RF24Mesh layers for internal communication. )
- *
- * Any device with a browser can connect to and control various sensors, and/or the sensors
- * can communicate directly with any number of IP based systems.
- *
- * Why?
- *
- * Enabling TCP/IP directly on the sensors enables users to connect directly
- * to the sensor nodes with any standard browser, http capable tools, or with
- * virtually any related protocol. Nodes are able to handle low level communications
- * at the network layer and/or TCP/IP based connections.
- *
- * Remote networks can be easily interconnected using SSH tunnelling, VPNs etc., and
- * sensor nodes can be configured to communicate without the need for an intermediary or additional programming.
- *
- * Main Features:
- *
- * 1. Same basic feature set as any Arduino Ethernet adapter, only wireless...
- * 2. Uses RPi OR Arduino+Linux OR Arduino + any SLIP capable device as the wireless gateway/router.
- * 3. Easy Arduino configuration: Just assign a unique IP address to each node, ending in 2-255 (ie: 192.168.1.32)
- *    *Linux devices use standard TCP/IP networking (IPTABLES,NAT,etc) and tools (wget, ftp, curl, python...)
- * 4. Automated (mesh) networking creates and maintains network connectivity as nodes join the network or move around
- * 5. Automated, multi-hop routing allows users to greatly extend the range of RF24 devices
- * 6. API based on the official Arduino Ethernet library. ( https://www.arduino.cc/en/Reference/Ethernet )
- * 7. RF24Gateway (companion program for RPi) provides a user interface that automatically handles TCP/IP
- *    data, and is easily modified to handle custom RF24Network/RF24Mesh data.
- * 8. Reduce/Remove the need for custom applications. Any device with a browser can connect directly to the sensors!
- * 9. Handle (relatively) large volumes of data and file transfers automatically.
+ * Reads temperature value and POST's the data at defined intervals.
  *
  * *************************************************************************
- * Example Network:
  *
- * In the following example, 8 Arduino devices have assembled themselves into a
- * wireless mesh network, with 3 sensors attached directly to RPi/Linux. Five
- * additional sensors are too far away to connect directly to the RPi/Gateway,
- * so they attach automatically to the closest sensor, which will automatically
- * relay all communications for the distant node.
  *
- * Example network:
- *
- * Arduino 4 <-> Arduino 1 <-> Raspberry Pi    <-> Webserver
- * Arduino 5 <->              OR Arduino+Linux <-> Database
- * Arduino 6 <->                               <-> PHP
- *                                             <-> BASH (Wget, Curl, etc)
- * Arduino 7 <-> Arduino 2 <->                 <-> Web-Browser
- * Arduino 8 <->                               <-> Python
- *               Arduino 3 <->                 <-> NodeJS
- *                                             <-> SSH Tunnel <-> Remote RF24Ethernet Sensor Network
- *                                             <-> VPN        <->
- *
- * In addition to communicating with external systems, the nodes are able to
- * communicate internally using TCP/IP, and/or at the RF24Mesh/RF24Network
- * layers.
- *
- * **************************************************************************
- *
- * RF24Ethernet simple web client example
- *
+ * This program adapted from code from TMRh20 https://github.com/TMRh20/RF24Ethernet/blob/master/examples/Getting_Started_SimpleClient_Mesh/Getting_Started_SimpleClient_Mesh.ino
  * RF24Ethernet uses the fine uIP stack by Adam Dunkels <adam@sics.se>
  *
  * In order to minimize memory use and program space:
@@ -81,6 +19,11 @@
  * 2. Edit the RF24Networl_config.h file
  * 3. Un-comment #define DISABLE_USER_PAYLOADS
  *
+ * Configuration Needed
+ * 1. Set the connected CE and CSN pins for the nRF24
+ * 2. Set an IP Address for this node in the same subnet as the master node
+ * 3. Set the IP Address of the lightweight HTTP server that accepts the POST requests.
+ * 4. Set the update interval
  *
  */
 
