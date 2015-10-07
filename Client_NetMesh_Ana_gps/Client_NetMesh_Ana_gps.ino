@@ -1,5 +1,16 @@
 /*
+ /*
+   This sample sketch demonstrates the normal use of a TinyGPS++ (TinyGPSPlus) object.
+   It requires the use of SoftwareSerial, and assumes that you have a
+   9600-baud serial GPS device hooked up on pins 4(rx) and 3(tx).
+*/
+
  * *************************************************************************
+ * This particular sketch does not work in it's current format.
+ * The UNO and small micros are compiling to approx > 90% of capacity with the GPS modules included
+ * It is posted here for later improvements 
+ *
+ *
  * RF24Ethernet Arduino library by TMRh20 - 2014-2015
  *
  * Automated (mesh) wireless networking and TCP/IP communication stack for RF24 radio modules
