@@ -2,6 +2,12 @@
 var express = require('express');
 var app = express();
 
+// Where the jade templates are stored
+app.set('views', './views')
+
+// jade is used for rendering html files and templates
+app.set('view engine', 'jade');
+
 // request is used for creating the outbound POST request
 var request = require('request');
 
@@ -27,6 +33,11 @@ var coords = [{lat: 52.069629, long: 4.275921}, {lat: 52.075919, long: 4.278144}
 // The Uri that we POST updates to thing speak
 var thingSpeakUri = 'http://api.thingspeak.com/update';
 
+// A JSON object of the all the known network nodes.
+var nodesObject = {
+    master:{},
+    nodes: []
+};
 
 /*
  *   Here we create the Express http server
@@ -34,18 +45,19 @@ var thingSpeakUri = 'http://api.thingspeak.com/update';
  *   Set the IP to an empty string to bind to all IP adresses on the RpI
  *
  */
-var server = app.listen(3000, '10.10.2.2', function () {
+var server = app.listen(3000, '', function () {
     var host = server.address().address;
     var port = server.address().port;
     console.log('Express HTTP Server listening at http://%s:%s', host, port);
 });
 
 /*
- *   Add a route to the root of the server.
+ *   Add a route to the root of the server that will return HTML for the Network Map
  *
  */
 app.get('/', function (req, res) {
-    res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
+    res.render('network');
+    //res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
     // console.log("Someone hit the home page");
 });
 
@@ -85,6 +97,13 @@ app.post('/api/sensor', function (req, res) {
  *
  */
 app.post('/api/gateway', function (req, res) {
+
+    // Reset the nodesObject
+    nodesObject = {
+        master:{},
+        nodes: []
+    };
+
     //console.log("Got a post from " + req.ip);
     if (!req.body.hasOwnProperty('masterNodeId') || !req.body.hasOwnProperty('masterAddress') || !req.body.hasOwnProperty('nodeList')) {
         res.statusCode = 400;
@@ -95,6 +114,18 @@ app.post('/api/gateway', function (req, res) {
 
     processGatewayData(req);
 });
+
+/*
+ *   Add a route to accept GET requests for the latest network map JSON object
+ *
+ */
+app.get('/lastmap.json', function (req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(nodesObject));
+   // res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
+    // console.log("Someone hit the home page");
+});
+
 
 /*
  *   A function to process data received from a RF24 sensor node
@@ -139,6 +170,13 @@ var processGatewayData = function (requestData) {
     var networkMap = [];
     networkMap.field1 = {
         id: requestData.body.masterNodeId,
+        address: requestData.body.masterAddress,
+        ipAddress: requestData.ip
+    };
+
+    // Add the master to the nodesObject that is returned for GET's to the root of the server
+    nodesObject.master = {
+        id:requestData.body.masterNodeId,
         address: requestData.body.masterAddress,
         ipAddress: requestData.ip
     };
@@ -216,6 +254,20 @@ var checkNodeAlive = function (networkMap) {
  *
  */
 var networkMapBuild = function (networkMap) {
+
+    // Add the nodes to the internal object that is returned for GET's to the root of the server
+    if (networkMap.field2 != null) {
+        for (var i = 0; i < networkMap.field2.length; i++) {
+            nodesObject.nodes.push(
+                {
+                    id:networkMap.field2[i].id,
+                    address:networkMap.field2[i].add,
+                    ipAddress:networkMap.field2[i].ip,
+                    act:networkMap.field2[i].act
+                }
+            );
+        }
+    };
 
     // Check if there are any nodes in field2
     if (networkMap.field2 != null) {
