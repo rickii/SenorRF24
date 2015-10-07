@@ -16,7 +16,7 @@
  *
  * In order to minimize memory use and program space:
  * 1. Open the RF24Network library folder
- * 2. Edit the RF24Networl_config.h file
+ * 2. Edit the RF24Network_config.h file
  * 3. Un-comment #define DISABLE_USER_PAYLOADS
  *
  * Configuration Needed

@@ -1,3 +1,41 @@
+/*
+*   This is a node.js application.
+*
+*   It provides a lightweight HTTP server for accepting data of wireless sensor nodes and uploading that
+*   data to the ThingSpeak cloud service.
+*
+*   It also generates a map of all the nodes in the network showing their relationship
+*   to each other along with their currently configured address.
+*
+*   The network map is available by opening a browser to the http://ip_of_raspberry:3000
+*
+*   Configuration
+*   -------------
+*   Note: Steps 1 to 4 are only needed if you want to upload data to the ThingSpeak cloud service.
+*   1. Create an account on ThingSpeak. Create a channel for each sensor node with 4 enabled fields.
+ *      Field 1: NodeId
+ *      Field 2: IP Address
+ *      Field 3: Temperature
+ *      Field 5: Mesh Address
+ *  2. Take the api key from the newly created ThingSpeak channel and add it to the 'thingSpeakChannels'
+ *      array as an object of the form:
+ *      {_id: xx, apiKey: 'API_Key_from_ThingSpeak'}
+ *      The _id is the node id of the sensor node which is always the last octet of the node's IP Address.
+ *  3. Create a channel on ThingSpeak for the sensor network map with a minimum of 2 fields.
+ *      Field 1: Master Node
+ *      Field 2: ChildNode 1-6
+ *
+ *      Add more fields dependent on the number of sensor nodes. The max being 44 nodes due to a restriction
+ *      on the length of the data in each field of 400 characters set by ThingSpeak.
+ *  4. Take the api key from the newly created network map channel and set it as:
+ *      thingSpeakNetworkApiKey = 'Network_Channel_API_Key_from_ThingSpeak';
+ *  5. You can add a set of random latitue and longitude coordinates to simulate the sensor nodes
+ *      having a GPS. Add the coordinates to the coords array.
+ *  6. The HTTP server is configured to listen on port: 3000. Change this if necessary.
+*
+ */
+
+
 // express is used for handling incoming GET and POST request
 var express = require('express');
 var app = express();
