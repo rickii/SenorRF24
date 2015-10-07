@@ -1,6 +1,50 @@
+/*
+*   This is a node.js application.
+*
+*   It provides a lightweight HTTP server for accepting data of wireless sensor nodes and uploading that
+*   data to the ThingSpeak cloud service.
+*
+*   It also generates a map of all the nodes in the network showing their relationship
+*   to each other along with their currently configured address.
+*
+*   The network map is available by opening a browser to the http://ip_of_raspberry:3000
+*
+*   Configuration
+*   -------------
+*   Note: Steps 1 to 4 are only needed if you want to upload data to the ThingSpeak cloud service.
+*   1. Create an account on ThingSpeak. Create a channel for each sensor node with 4 enabled fields.
+ *      Field 1: NodeId
+ *      Field 2: IP Address
+ *      Field 3: Temperature
+ *      Field 5: Mesh Address
+ *  2. Take the api key from the newly created ThingSpeak channel and add it to the 'thingSpeakChannels'
+ *      array as an object of the form:
+ *      {_id: xx, apiKey: 'API_Key_from_ThingSpeak'}
+ *      The _id is the node id of the sensor node which is always the last octet of the node's IP Address.
+ *  3. Create a channel on ThingSpeak for the sensor network map with a minimum of 2 fields.
+ *      Field 1: Master Node
+ *      Field 2: ChildNode 1-6
+ *
+ *      Add more fields dependent on the number of sensor nodes. The max being 44 nodes due to a restriction
+ *      on the length of the data in each field of 400 characters set by ThingSpeak.
+ *  4. Take the api key from the newly created network map channel and set it as:
+ *      thingSpeakNetworkApiKey = 'Network_Channel_API_Key_from_ThingSpeak';
+ *  5. You can add a set of random latitue and longitude coordinates to simulate the sensor nodes
+ *      having a GPS. Add the coordinates to the coords array.
+ *  6. The HTTP server is configured to listen on port: 3000. Change this if necessary.
+*
+ */
+
+
 // express is used for handling incoming GET and POST request
 var express = require('express');
 var app = express();
+
+// Where the jade templates are stored
+app.set('views', './views')
+
+// jade is used for rendering html files and templates
+app.set('view engine', 'jade');
 
 // request is used for creating the outbound POST request
 var request = require('request');
@@ -27,6 +71,11 @@ var coords = [{lat: 52.069629, long: 4.275921}, {lat: 52.075919, long: 4.278144}
 // The Uri that we POST updates to thing speak
 var thingSpeakUri = 'http://api.thingspeak.com/update';
 
+// A JSON object of the all the known network nodes.
+var nodesObject = {
+    master:{},
+    nodes: []
+};
 
 /*
  *   Here we create the Express http server
@@ -34,18 +83,19 @@ var thingSpeakUri = 'http://api.thingspeak.com/update';
  *   Set the IP to an empty string to bind to all IP adresses on the RpI
  *
  */
-var server = app.listen(3000, '10.10.2.2', function () {
+var server = app.listen(3000, '', function () {
     var host = server.address().address;
     var port = server.address().port;
     console.log('Express HTTP Server listening at http://%s:%s', host, port);
 });
 
 /*
- *   Add a route to the root of the server.
+ *   Add a route to the root of the server that will return HTML for the Network Map
  *
  */
 app.get('/', function (req, res) {
-    res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
+    res.render('network');
+    //res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
     // console.log("Someone hit the home page");
 });
 
@@ -85,6 +135,13 @@ app.post('/api/sensor', function (req, res) {
  *
  */
 app.post('/api/gateway', function (req, res) {
+
+    // Reset the nodesObject
+    nodesObject = {
+        master:{},
+        nodes: []
+    };
+
     //console.log("Got a post from " + req.ip);
     if (!req.body.hasOwnProperty('masterNodeId') || !req.body.hasOwnProperty('masterAddress') || !req.body.hasOwnProperty('nodeList')) {
         res.statusCode = 400;
@@ -95,6 +152,18 @@ app.post('/api/gateway', function (req, res) {
 
     processGatewayData(req);
 });
+
+/*
+ *   Add a route to accept GET requests for the latest network map JSON object
+ *
+ */
+app.get('/lastmap.json', function (req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(nodesObject));
+   // res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
+    // console.log("Someone hit the home page");
+});
+
 
 /*
  *   A function to process data received from a RF24 sensor node
@@ -139,6 +208,13 @@ var processGatewayData = function (requestData) {
     var networkMap = [];
     networkMap.field1 = {
         id: requestData.body.masterNodeId,
+        address: requestData.body.masterAddress,
+        ipAddress: requestData.ip
+    };
+
+    // Add the master to the nodesObject that is returned for GET's to the root of the server
+    nodesObject.master = {
+        id:requestData.body.masterNodeId,
         address: requestData.body.masterAddress,
         ipAddress: requestData.ip
     };
@@ -216,6 +292,20 @@ var checkNodeAlive = function (networkMap) {
  *
  */
 var networkMapBuild = function (networkMap) {
+
+    // Add the nodes to the internal object that is returned for GET's to the root of the server
+    if (networkMap.field2 != null) {
+        for (var i = 0; i < networkMap.field2.length; i++) {
+            nodesObject.nodes.push(
+                {
+                    id:networkMap.field2[i].id,
+                    address:networkMap.field2[i].add,
+                    ipAddress:networkMap.field2[i].ip,
+                    act:networkMap.field2[i].act
+                }
+            );
+        }
+    };
 
     // Check if there are any nodes in field2
     if (networkMap.field2 != null) {
