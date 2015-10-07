@@ -2,6 +2,9 @@
  * *************************************************************************
  * LightSens_Client_Mesh.ino
  * 
+ * The sketch is an example of connecting an I2C sensor to the Mesh Network.
+ * It follows a similar format to other I2C sensors
+ * 
  * https://github.com/rickii/SensorRF24
  *
  *
