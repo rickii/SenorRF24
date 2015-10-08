@@ -29,8 +29,8 @@
  *      on the length of the data in each field of 400 characters set by ThingSpeak.
  *  4. Take the api key from the newly created network map channel and set it as:
  *      thingSpeakNetworkApiKey = 'Network_Channel_API_Key_from_ThingSpeak';
- *  5. You can add a set of random latitue and longitude coordinates to simulate the sensor nodes
- *      having a GPS. Add the coordinates to the coords array.
+ *  5. You can add a set of random latitude and longitude coordinates to simulate the sensor nodes
+ *      having a GPS. Add the coordinates to the 'coords' array.
  *  6. The HTTP server is configured to listen on port: 3000. Change this if necessary.
 *
  */
@@ -60,10 +60,10 @@ var queryString = require('querystring');
 var ping = require('ping');
 
 // Each thingspeak channel has a separate api key, this array allows us to map between our sensor Node Id and the api key.
-var thingSpeakChannels = [{_id: 65, apiKey: '4BLDCMJ2KGMKCRGN'}, {_id: 150, apiKey: 'J7EMRJYR7YIA0Z7N'}];
+var thingSpeakChannels = [{_id: xx, apiKey: 'API_Key_from_ThingSpeak'}, {_id: xx, apiKey: 'API_Key_from_ThingSpeak'}];
 
 // This is a thing speak channel that is used to display all nodes in a network.
-var thingSpeakNetworkApiKey = 'IXRW2956IFVPC8HY';
+var thingSpeakNetworkApiKey = 'Network_Channel_API_Key_from_ThingSpeak';
 
 // Just some random Latitudes and Longitudes where we can pretend our sensors are.
 var coords = [{lat: 52.069629, long: 4.275921}, {lat: 52.075919, long: 4.278144}, {lat: 52.075694, long: 4.288126}];
