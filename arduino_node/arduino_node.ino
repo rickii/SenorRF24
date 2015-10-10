@@ -46,6 +46,20 @@ RF24Mesh mesh(radio, network);
 RF24EthernetClass RF24Ethernet(radio, network, mesh);
 
 
+// Timer used to check our connection to the RF24 mesh
+uint32_t mesh_timer = 0;
+
+// The server that the node will send a POST of its sensor data
+IPAddress httpServer(10, 10, 2, 2);
+
+// Time interval in milliseconds to do a sensor read and send an update (number of seconds * 1000 = interval)
+const int updateInterval = 20 * 1000;
+
+// Variables to control connection to HTTP server
+long lastConnectionTime = 0;
+boolean connectedOnLastAttempt = false;
+int failedCounter = 0;
+
 EthernetClient client;
 
 void setup() {
@@ -69,23 +83,7 @@ void setup() {
   //Ethernet.set_gateway(gwIP);
 }
 
-//uint32_t counter = 0;
-//uint32_t reqTimer = 0;
 
-uint32_t mesh_timer = 0;
-
-// The server that the node will send a POST of its sensor data
-IPAddress httpServer(10, 10, 2, 2);
-
-// Time interval in milliseconds to do a sensor read and send an update (number of seconds * 1000 = interval)
-const int updateInterval = 20 * 1000;
-
-// Variables to control connection to server
-long lastConnectionTime = 0;
-boolean connectedOnLastAttempt = false;
-int failedCounter = 0;
-
-//String nodeId = (String)4;      // This will be sent with the POST data to help identify this node
 
 void loop() {
 
@@ -114,7 +112,7 @@ void loop() {
     Serial.print(c);
   }
 
-  // if we are no longer connected to the server's then stop the client:
+  // if we are no longer connected to the HTTP server then stop the client:
   if (!client.connected() && connectedOnLastAttempt)
   {
     Serial.println("Server disconnected. Will stop the client");
