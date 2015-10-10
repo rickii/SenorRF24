@@ -67,10 +67,8 @@ const int updateInterval = 10000;      // Time interval in milliseconds to do a 
 
 // Variable Setup
 long lastConnectionTime = 0;
-boolean lastConnected = false;
+boolean connectedOnLastAttempt = false;
 int failedCounter = 0;
-
-String nodeId = (String)5; // This will be sent with the POST data to help identify this node
 
 
 EthernetClient client;
@@ -113,15 +111,15 @@ void loop() {
 
   // Optional: If the node needs to move around physically, or using failover nodes etc.,
   // enable address renewal
-  /*
-  if (millis() - mesh_timer > 13000) { //Every 30 seconds, test mesh connectivity
+  
+  if (millis() - mesh_timer > 30000) { //Every 30 seconds, test mesh connectivity
     mesh_timer = millis();
     if ( ! mesh.checkConnection() ) {
       //refresh the network address
       mesh.renewAddress();
     }
   }
-*/
+
   size_t size;
 
   // Get incoming data
@@ -130,28 +128,29 @@ void loop() {
     Serial.print(c);
   }
 
-  // Disconnect from the server
-  if (!client.connected() && lastConnected)
+  // if we are no longer connected to the server's then stop the client:
+  if (!client.connected() && connectedOnLastAttempt)
   {
-    Serial.println("...disconnected");
-    mesh.renewAddress();
+    Serial.println("Server disconnected. Will stop the client");
+    Serial.println();
+    client.stop();
+    connectedOnLastAttempt = false;
   }
   
    if ((millis() - lastConnectionTime) > updateInterval) {
-    sendSensorData(tempString, nodeId);
+    sendSensorData(tempString);
     }
-  else {
-    Serial.println(" Not ready" );
-  }
+  //else {
+  //  Serial.println(" Not ready" );  }
 
-  lastConnected = client.connected();
+
 } // end of main
 
-void sendSensorData(String tempData, String nodeId)
+void sendSensorData(String tempString)
 {
   // concatenate all the data into a single string of key value pairs
-  String formData = "temp=" + tempData + "&nodeid=" + nodeId;
-
+  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address, OCT) + "&meshParent=0" + String(network.parent(), OCT);
+ 
   if (client.connect(serverUri, 3000))
   {
     client.print("POST /api/sensor HTTP/1.1\n");
@@ -168,6 +167,7 @@ void sendSensorData(String tempData, String nodeId)
 
     if (client.connected())
     {
+      connectedOnLastAttempt = client.connected();
       Serial.println("POSTing data...");
       failedCounter = 0;
     }
@@ -181,10 +181,11 @@ void sendSensorData(String tempData, String nodeId)
   else
   {
     failedCounter++;
-    Serial.println("Connection to server Failed spciall(" + String(failedCounter, DEC) + ")");
+    Serial.println("Connection to server failed (" + String(failedCounter, DEC) + ")");
     lastConnectionTime = millis();
   }
 }
+
 void BH1750_Init(int address){
   Wire.beginTransmission(address);
   Wire.write(0x10); // 1 [lux] aufloesung
