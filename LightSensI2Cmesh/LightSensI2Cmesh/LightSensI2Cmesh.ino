@@ -150,15 +150,15 @@ void loop() {
       else Serial.print((int)valf, DEC);
       tempString = (String)valf;
     }
-
-    sendSensorData(tempString);
+  // concatenate all the data into a single string of key value pairs
+  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address, OCT) + "&meshParent=0" + String(network.parent(), OCT);
+    Serial.println(formData);
+    sendSensorData(formData);
   }
 } // end of loop
 
-void sendSensorData(String tempString)
+void sendSensorData(String formData)
 {
-  // concatenate all the data into a single string of key value pairs
-  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address, OCT) + "&meshParent=0" + String(network.parent(), OCT);
 
   if (client.connect(serverUri, 3000))
   {
