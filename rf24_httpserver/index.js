@@ -1,18 +1,18 @@
 /*
-*   This is a node.js application.
-*
-*   It provides a lightweight HTTP server for accepting data of wireless sensor nodes and uploading that
-*   data to the ThingSpeak cloud service.
-*
-*   It also generates a map of all the nodes in the network showing their relationship
-*   to each other along with their currently configured address.
-*
-*   The network map is available by opening a browser to the http://ip_of_raspberry:3000
-*
-*   Configuration
-*   -------------
-*   Note: Steps 1 to 4 are only needed if you want to upload data to the ThingSpeak cloud service.
-*   1. Create an account on ThingSpeak. Create a channel for each sensor node with 4 enabled fields.
+ *   This is a node.js application.
+ *
+ *   It provides a lightweight HTTP server for accepting data of wireless sensor nodes and uploading that
+ *   data to the ThingSpeak cloud service.
+ *
+ *   It also generates a map of all the nodes in the network showing their relationship
+ *   to each other along with their currently configured address.
+ *
+ *   The network map is available by opening a browser to the http://ip_of_raspberry:3000
+ *
+ *   Configuration
+ *   -------------
+ *   Note: Steps 1 to 4 are only needed if you want to upload data to the ThingSpeak cloud service.
+ *   1. Create an account on ThingSpeak. Create a channel for each sensor node with 4 enabled fields.
  *      Field 1: NodeId
  *      Field 2: IP Address
  *      Field 3: Temperature
@@ -32,7 +32,7 @@
  *  5. You can add a set of random latitude and longitude coordinates to simulate the sensor nodes
  *      having a GPS. Add the coordinates to the 'coords' array.
  *  6. The HTTP server is configured to listen on port: 3000. Change this if necessary.
-*
+ *
  */
 
 
@@ -73,7 +73,7 @@ var thingSpeakUri = 'http://api.thingspeak.com/update';
 
 // A JSON object of the all the known network nodes.
 var nodesObject = {
-    master:{},
+    master: {},
     nodes: []
 };
 
@@ -126,6 +126,25 @@ app.post('/api/sensor', function (req, res) {
 });
 
 /*
+ *   Add a route to accept POST requests from the RF24 light sensor nodes
+ *
+ *   The RF24 node must send a POST request with the form data having keys:
+ *       light
+ *
+ */
+app.post('/api/sensor', function (req, res) {
+    // console.log("Got a post from " + req.ip);
+    if (!req.body.hasOwnProperty('light')) {
+        res.statusCode = 400;
+        console.log("POST was bad");
+        return res.send('Error 400: Post syntax incorrect.');
+    }
+    res.send('POST request accepted');
+
+    processLightSensorData(req);
+});
+
+/*
  *   Add a route to accept POST requests from the RF24 master gateway
  *
  *   The RF24 master gateway node must must send a POST request with the form data having keys:
@@ -138,7 +157,7 @@ app.post('/api/gateway', function (req, res) {
 
     // Reset the nodesObject
     nodesObject = {
-        master:{},
+        master: {},
         nodes: []
     };
 
@@ -160,7 +179,7 @@ app.post('/api/gateway', function (req, res) {
 app.get('/lastmap.json', function (req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(nodesObject));
-   // res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
+    // res.send('Lightweight HTTP server for accepting POSTs from RF24 sensor nodes!');
     // console.log("Someone hit the home page");
 });
 
@@ -200,6 +219,40 @@ var processSensorData = function (requestData) {
 };
 
 /*
+ *   A function to process data received from a RF24 light sensor node
+ *
+ */
+var processLightSensorData = function (requestData) {
+    // Build an object of relevant data from the request
+    // The field numbers directly refer to the fields setup on thing speak
+    var sensorData = {
+        field1: requestData.ip.substring(0, requestData.ip.lastIndexOf('.') + 1),
+        field2: requestData.ip,
+        field3: requestData.body.light
+        // field5: requestData.body.meshAddress no getting meshaddress from the node as it doesnt have enough memory for the long tring
+    }
+    // If the node sent lat and long then use it otherwise mock it
+    if (requestData.body.lat != null && requestData.body.long != null) {
+        sensorData.lat = requestData.body.lat;
+        sensorData.long = requestData.body.long;
+    }
+    else {
+        var position = getRandomCoords();
+        sensorData.lat = position.lat;
+        sensorData.long = position.long;
+    }
+
+    // Get the thing speak api key for this node
+    var apiKey = getApiKey(sensorData.field1);
+
+    // Convert the sensorData to a HTML string
+    var formData = queryString.stringify(sensorData);
+
+    // Pass the data to the send method
+    sendToThingSpeak(formData, apiKey);
+};
+
+/*
  *   A function to process the data received from the RF24 gateway node
  */
 var processGatewayData = function (requestData) {
@@ -214,7 +267,7 @@ var processGatewayData = function (requestData) {
 
     // Add the master to the nodesObject that is returned for GET's to the root of the server
     nodesObject.master = {
-        id:requestData.body.masterNodeId,
+        id: requestData.body.masterNodeId,
         address: requestData.body.masterAddress,
         ipAddress: requestData.ip
     };
@@ -298,14 +351,15 @@ var networkMapBuild = function (networkMap) {
         for (var i = 0; i < networkMap.field2.length; i++) {
             nodesObject.nodes.push(
                 {
-                    id:networkMap.field2[i].id,
-                    address:networkMap.field2[i].add,
-                    ipAddress:networkMap.field2[i].ip,
-                    act:networkMap.field2[i].act
+                    id: networkMap.field2[i].id,
+                    address: networkMap.field2[i].add,
+                    ipAddress: networkMap.field2[i].ip,
+                    act: networkMap.field2[i].act
                 }
             );
         }
-    };
+    }
+    ;
 
     // Check if there are any nodes in field2
     if (networkMap.field2 != null) {
@@ -365,14 +419,14 @@ var sendToThingSpeak = function (formData, apiKey) {
         body: formData,
         method: 'POST'
     }, function (err, res, body) {
-       /* if (!err && res.statusCode == 200) {
-            // console.log(body)
-        }
-        else {
-            //console.log("Thingspeak Error: " + err);
-            //console.log("Thingspeak response code: " + res.statusCode);
-            // console.log("Response body: " + body)
-        }*/
+        /* if (!err && res.statusCode == 200) {
+         // console.log(body)
+         }
+         else {
+         //console.log("Thingspeak Error: " + err);
+         //console.log("Thingspeak response code: " + res.statusCode);
+         // console.log("Response body: " + body)
+         }*/
     });
 };
 
