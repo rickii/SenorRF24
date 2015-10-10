@@ -132,7 +132,7 @@ app.post('/api/sensor', function (req, res) {
  *       light
  *
  */
-app.post('/api/sensor', function (req, res) {
+app.post('/api/lightsensor', function (req, res) {
     // console.log("Got a post from " + req.ip);
     if (!req.body.hasOwnProperty('light')) {
         res.statusCode = 400;
@@ -226,10 +226,10 @@ var processLightSensorData = function (requestData) {
     // Build an object of relevant data from the request
     // The field numbers directly refer to the fields setup on thing speak
     var sensorData = {
-        field1: requestData.ip.substring(0, requestData.ip.lastIndexOf('.') + 1),
+        field1: requestData.ip.substring(requestData.ip.lastIndexOf('.')+1), // determine node ip from the ip address
         field2: requestData.ip,
         field3: requestData.body.light
-        // field5: requestData.body.meshAddress no getting meshaddress from the node as it doesnt have enough memory for the long tring
+        // field5: requestData.body.meshAddress not getting meshaddress from the node as it doesnt have enough memory for the long tring
     }
     // If the node sent lat and long then use it otherwise mock it
     if (requestData.body.lat != null && requestData.body.long != null) {
