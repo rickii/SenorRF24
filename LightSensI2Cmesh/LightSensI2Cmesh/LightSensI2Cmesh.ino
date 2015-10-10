@@ -151,7 +151,7 @@ void loop() {
       tempString = (String)valf;
     }
   // concatenate all the data into a single string of key value pairs
-  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address, OCT) + "&meshParent=0" + String(network.parent(), OCT);
+  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address, OCT);
     Serial.println(formData);
     sendSensorData(formData);
   }
