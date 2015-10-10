@@ -113,6 +113,7 @@ void loop() {
 
   // Optional: If the node needs to move around physically, or using failover nodes etc.,
   // enable address renewal
+  /*
   if (millis() - mesh_timer > 13000) { //Every 30 seconds, test mesh connectivity
     mesh_timer = millis();
     if ( ! mesh.checkConnection() ) {
@@ -120,7 +121,7 @@ void loop() {
       mesh.renewAddress();
     }
   }
-
+*/
   size_t size;
 
   // Get incoming data
