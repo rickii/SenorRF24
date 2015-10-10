@@ -54,7 +54,7 @@ RF24EthernetClass RF24Ethernet(radio, network, mesh);
 // light sensor
 int BH1750_address = 0x23; // i2c Addresse
 byte buff[2];
-String tempString = "000000";
+String lightString = "000000";
 
 
 
@@ -148,10 +148,10 @@ void loop() {
 
       if (valf < 0)Serial.print("> 65535");
       else Serial.print((int)valf, DEC);
-      tempString = (String)valf;
+      lightString = (String)valf;
     }
   // concatenate all the data into a single string of key value pairs
-  String formData = "temperature=" + tempString + "&nodeId=" + (String)mesh.getNodeID() + "&meshAddress=" + "0" + String(mesh.mesh_address, OCT);
+  String formData = "light=" + lightString;
     Serial.println(formData);
     sendSensorData(formData);
   }
@@ -162,7 +162,7 @@ void sendSensorData(String formData)
 
   if (client.connect(serverUri, 3000))
   {
-    client.print("POST /api/sensor HTTP/1.1\n");
+    client.print("POST /api/lightsensor HTTP/1.1\n");
     client.print("Host: 10.10.2.2\n");
     client.print("Connection: close\n");
     client.print("Content-Type: application/x-www-form-urlencoded\n");
