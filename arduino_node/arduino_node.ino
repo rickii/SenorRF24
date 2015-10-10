@@ -69,8 +69,8 @@ void setup() {
   //Ethernet.set_gateway(gwIP);
 }
 
-uint32_t counter = 0;
-uint32_t reqTimer = 0;
+//uint32_t counter = 0;
+//uint32_t reqTimer = 0;
 
 uint32_t mesh_timer = 0;
 
